@@ -1,0 +1,696 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <title>열차 안내방송</title>
+  <style>
+    body {
+      background-color: #1e1e1e;
+      color: #eee;
+      font-family: 'Pretendard', sans-serif;
+      margin: 0;
+      padding: 20px;
+    }
+    h1 {
+      color: #00c3ff;
+      margin-bottom: 10px;
+    }
+    #log {
+      background: #333;
+      padding: 15px;
+      border-radius: 8px;
+      margin-bottom: 20px;
+      font-size: 1.1em;
+      color: #0f0;
+      font-weight: bold;
+      min-height: 30px;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 20px;
+      background: #2b2b2b;
+      border-radius: 8px;
+      overflow: hidden;
+    }
+    th, td {
+      padding: 10px;
+      border-bottom: 1px solid #444;
+    }
+    th {
+      background-color: #00c3ff;
+      color: #111;
+      font-weight: bold;
+      font-size: 1.1em;
+    }
+    tr:hover {
+      background-color: #444;
+    }
+    td {
+      text-align: center;
+      font-size: 0.95em;
+    }
+  </style>
+</head>
+<body>
+  <h1>🚆 열차 안내방송 시스템</h1>
+  <div id="log">방송 대기 중...</div>
+<button id="startBtn">방송 시작</button>
+
+
+  <div id="timetable"></div>
+
+  <script>
+document.getElementById("startBtn").addEventListener("click", () => {
+  setInterval(checkTrain, 1000);
+  document.getElementById("startBtn").style.display = "none";
+});
+
+let audio = null;
+const announcedTimes = new Set();
+
+function playAudio(src) {
+  if (audio) {
+    audio.pause();
+    audio.currentTime = 0;
+  }
+  audio = new Audio(src);
+  audio.play();
+}
+
+
+
+    // ✅ 네 timetable JSON 그대로 여기에 붙여넣어라
+    const timetable =
+[
+  {"hour":5,"minute":30,"direction":"BOHUN","dest":"중앙보훈병원","express":true},
+  {"hour":5,"minute":37,"direction":"BOHUN","dest":"중앙보훈병원","express":false},
+  {"hour":5,"minute":45,"direction":"BOHUN","dest":"중앙보훈병원","express":true},
+  {"hour":5,"minute":51,"direction":"BOHUN","dest":"중앙보훈병원","express":false},
+  {"hour":5,"minute":56,"direction":"BOHUN","dest":"중앙보훈병원","express":true},
+
+  {"hour":5,"minute":30,"direction":"GAEHWA","dest":"개화","express":false},
+  {"hour":5,"minute":45,"direction":"GAEHWA","dest":"개화","express":false},
+  {"hour":5,"minute":55,"direction":"GAEHWA","dest":"개화","express":false},
+
+  {"hour":6,"minute":1,"direction":"BOHUN","dest":"중앙보훈병원","express":false},
+  {"hour":6,"minute":7,"direction":"BOHUN","dest":"중앙보훈병원","express":true},
+  {"hour":6,"minute":13,"direction":"BOHUN","dest":"중앙보훈병원","express":false},
+  {"hour":6,"minute":19,"direction":"BOHUN","dest":"중앙보훈병원","express":true},
+  {"hour":6,"minute":25,"direction":"BOHUN","dest":"중앙보훈병원","express":false},
+  {"hour":6,"minute":31,"direction":"BOHUN","dest":"중앙보훈병원","express":true},
+  {"hour":6,"minute":37,"direction":"BOHUN","dest":"중앙보훈병원","express":false},
+  {"hour":6,"minute":43,"direction":"BOHUN","dest":"중앙보훈병원","express":true},
+  {"hour":6,"minute":45,"direction":"BOHUN","dest":"중앙보훈병원","express":false},
+  {"hour":6,"minute":53,"direction":"BOHUN","dest":"중앙보훈병원","express":false},
+  {"hour":6,"minute":55,"direction":"BOHUN","dest":"중앙보훈병원","express":true},
+
+  {"hour":6,"minute":9,"direction":"GAEHWA","dest":"개화","express":false},
+  {"hour":6,"minute":24,"direction":"GAEHWA","dest":"개화","express":false},
+  {"hour":6,"minute":30,"direction":"GAEHWA","dest":"김포공항","express":true},
+  {"hour":6,"minute":39,"direction":"GAEHWA","dest":"개화","express":false},
+  {"hour":6,"minute":45,"direction":"GAEHWA","dest":"김포공항","express":true},
+  {"hour":6,"minute":52,"direction":"GAEHWA","dest":"개화","express":false},
+  {"hour":6,"minute":58,"direction":"GAEHWA","dest":"김포공항","express":true},
+
+  {"hour":7,"minute":1,"direction":"BOHUN","dest":"중앙보훈병원","express":false},
+  {"hour":7,"minute":3,"direction":"BOHUN","dest":"중앙보훈병원","express":true},
+  {"hour":7,"minute":7,"direction":"BOHUN","dest":"중앙보훈병원","express":false},
+  {"hour":7,"minute":9,"direction":"BOHUN","dest":"중앙보훈병원","express":true},
+  {"hour":7,"minute":13,"direction":"BOHUN","dest":"중앙보훈병원","express":false},
+  {"hour":7,"minute":16,"direction":"BOHUN","dest":"중앙보훈병원","express":true},
+  {"hour":7,"minute":20,"direction":"BOHUN","dest":"중앙보훈병원","express":false},
+  {"hour":7,"minute":22,"direction":"BOHUN","dest":"중앙보훈병원","express":true},
+  {"hour":7,"minute":26,"direction":"BOHUN","dest":"중앙보훈병원","express":false},
+  {"hour":7,"minute":28,"direction":"BOHUN","dest":"중앙보훈병원","express":true},
+  {"hour":7,"minute":32,"direction":"BOHUN","dest":"중앙보훈병원","express":false},
+  {"hour":7,"minute":35,"direction":"BOHUN","dest":"중앙보훈병원","express":true},
+  {"hour":7,"minute":39,"direction":"BOHUN","dest":"중앙보훈병원","express":false},
+  {"hour":7,"minute":41,"direction":"BOHUN","dest":"중앙보훈병원","express":true},
+  {"hour":7,"minute":45,"direction":"BOHUN","dest":"중앙보훈병원","express":false},
+  {"hour":7,"minute":47,"direction":"BOHUN","dest":"중앙보훈병원","express":true},
+  {"hour":7,"minute":51,"direction":"BOHUN","dest":"중앙보훈병원","express":false},
+  {"hour":7,"minute":54,"direction":"BOHUN","dest":"중앙보훈병원","express":true},
+  {"hour":7,"minute":58,"direction":"BOHUN","dest":"중앙보훈병원","express":false},
+
+  {"hour":7,"minute":5,"direction":"GAEHWA","dest":"김포공항","express":true},
+  {"hour":7,"minute":11,"direction":"GAEHWA","dest":"개화","express":false},
+  {"hour":7,"minute":18,"direction":"GAEHWA","dest":"김포공항","express":true},
+  {"hour":7,"minute":24,"direction":"GAEHWA","dest":"개화","express":false},
+  {"hour":7,"minute":31,"direction":"GAEHWA","dest":"김포공항","express":true},
+  {"hour":7,"minute":37,"direction":"GAEHWA","dest":"개화","express":false},
+  {"hour":7,"minute":44,"direction":"GAEHWA","dest":"김포공항","express":true},
+  {"hour":7,"minute":49,"direction":"GAEHWA","dest":"개화","express":false},
+  {"hour":7,"minute":53,"direction":"GAEHWA","dest":"개화","express":false},
+  {"hour":7,"minute":59,"direction":"GAEHWA","dest":"개화","express":false},
+
+  {"hour":8,"minute":0,"direction":"BOHUN","dest":"중앙보훈병원","express":true},
+  {"hour":8,"minute":4,"direction":"BOHUN","dest":"중앙보훈병원","express":false},
+  {"hour":8,"minute":6,"direction":"BOHUN","dest":"중앙보훈병원","express":true},
+  {"hour":8,"minute":10,"direction":"BOHUN","dest":"중앙보훈병원","express":false},
+  {"hour":8,"minute":13,"direction":"BOHUN","dest":"중앙보훈병원","express":true},
+  {"hour":8,"minute":17,"direction":"BOHUN","dest":"중앙보훈병원","express":false},
+  {"hour":8,"minute":19,"direction":"BOHUN","dest":"중앙보훈병원","express":true},
+  {"hour":8,"minute":23,"direction":"BOHUN","dest":"중앙보훈병원","express":false},
+  {"hour":8,"minute":25,"direction":"BOHUN","dest":"중앙보훈병원","express":true},
+  {"hour":8,"minute":29,"direction":"BOHUN","dest":"중앙보훈병원","express":false},
+  {"hour":8,"minute":32,"direction":"BOHUN","dest":"중앙보훈병원","express":true},
+  {"hour":8,"minute":36,"direction":"BOHUN","dest":"중앙보훈병원","express":false},
+  {"hour":8,"minute":38,"direction":"BOHUN","dest":"중앙보훈병원","express":true},
+  {"hour":8,"minute":42,"direction":"BOHUN","dest":"중앙보훈병원","express":false},
+  {"hour":8,"minute":44,"direction":"BOHUN","dest":"중앙보훈병원","express":true},
+  {"hour":8,"minute":48,"direction":"BOHUN","dest":"중앙보훈병원","express":false},
+  {"hour":8,"minute":51,"direction":"BOHUN","dest":"중앙보훈병원","express":true},
+  {"hour":8,"minute":55,"direction":"BOHUN","dest":"중앙보훈병원","express":false},
+  {"hour":8,"minute":58,"direction":"BOHUN","dest":"중앙보훈병원","express":true},
+
+  {"hour":8,"minute":5,"direction":"GAEHWA","dest":"개화","express":false},
+  {"hour":8,"minute":11,"direction":"GAEHWA","dest":"김포공항","express":true},
+  {"hour":8,"minute":16,"direction":"GAEHWA","dest":"개화","express":false},
+  {"hour":8,"minute":22,"direction":"GAEHWA","dest":"김포공항","express":true},
+  {"hour":8,"minute":25,"direction":"GAEHWA","dest":"개화","express":false},
+  {"hour":8,"minute":31,"direction":"GAEHWA","dest":"김포공항","express":true},
+  {"hour":8,"minute":33,"direction":"GAEHWA","dest":"개화","express":false},
+  {"hour":8,"minute":39,"direction":"GAEHWA","dest":"김포공항","express":true},
+  {"hour":8,"minute":42,"direction":"GAEHWA","dest":"개화","express":false},
+  {"hour":8,"minute":48,"direction":"GAEHWA","dest":"김포공항","express":true},
+  {"hour":8,"minute":51,"direction":"GAEHWA","dest":"개화","express":false},
+  {"hour":8,"minute":57,"direction":"GAEHWA","dest":"김포공항","express":true},
+  {"hour":8,"minute":59,"direction":"GAEHWA","dest":"개화","express":false},
+
+  {"hour":9,"minute":4,"direction":"BOHUN","dest":"중앙보훈병원","express":false},
+  {"hour":9,"minute":7,"direction":"BOHUN","dest":"중앙보훈병원","express":true},
+  {"hour":9,"minute":13,"direction":"BOHUN","dest":"중앙보훈병원","express":false},
+  {"hour":9,"minute":19,"direction":"BOHUN","dest":"중앙보훈병원","express":true},
+  {"hour":9,"minute":24,"direction":"BOHUN","dest":"중앙보훈병원","express":false},
+  {"hour":9,"minute":30,"direction":"BOHUN","dest":"중앙보훈병원","express":true},
+  {"hour":9,"minute":35,"direction":"BOHUN","dest":"중앙보훈병원","express":false},
+  {"hour":9,"minute":41,"direction":"BOHUN","dest":"중앙보훈병원","express":true},
+  {"hour":9,"minute":46,"direction":"BOHUN","dest":"중앙보훈병원","express":false},
+  {"hour":9,"minute":52,"direction":"BOHUN","dest":"중앙보훈병원","express":true},
+  {"hour":9,"minute":57,"direction":"BOHUN","dest":"중앙보훈병원","express":false},
+
+  {"hour":9,"minute":5,"direction":"GAEHWA","dest":"김포공항","express":true},
+  {"hour":9,"minute":7,"direction":"GAEHWA","dest":"개화","express":false},
+  {"hour":9,"minute":12,"direction":"GAEHWA","dest":"김포공항","express":true},
+  {"hour":9,"minute":13,"direction":"GAEHWA","dest":"개화","express":false},
+  {"hour":9,"minute":18,"direction":"GAEHWA","dest":"김포공항","express":true},
+  {"hour":9,"minute":20,"direction":"GAEHWA","dest":"개화","express":false},
+  {"hour":9,"minute":24,"direction":"GAEHWA","dest":"김포공항","express":true},
+  {"hour":9,"minute":26,"direction":"GAEHWA","dest":"개화","express":false},
+  {"hour":9,"minute":31,"direction":"GAEHWA","dest":"김포공항","express":true},
+  {"hour":9,"minute":32,"direction":"GAEHWA","dest":"개화","express":false},
+  {"hour":9,"minute":37,"direction":"GAEHWA","dest":"김포공항","express":true},
+  {"hour":9,"minute":39,"direction":"GAEHWA","dest":"개화","express":false},
+  {"hour":9,"minute":43,"direction":"GAEHWA","dest":"김포공항","express":true},
+  {"hour":9,"minute":45,"direction":"GAEHWA","dest":"개화","express":false},
+  {"hour":9,"minute":50,"direction":"GAEHWA","dest":"김포공항","express":true},
+  {"hour":9,"minute":51,"direction":"GAEHWA","dest":"개화","express":false},
+  {"hour":9,"minute":56,"direction":"GAEHWA","dest":"김포공항","express":true},
+  {"hour":9,"minute":58,"direction":"GAEHWA","dest":"개화","express":false},
+
+  {"hour":10,"minute":3,"direction":"BOHUN","dest":"중앙보훈병원","express":true},
+  {"hour":10,"minute":8,"direction":"BOHUN","dest":"중앙보훈병원","express":false},
+  {"hour":10,"minute":14,"direction":"BOHUN","dest":"중앙보훈병원","express":true},
+  {"hour":10,"minute":19,"direction":"BOHUN","dest":"중앙보훈병원","express":false},
+  {"hour":10,"minute":25,"direction":"BOHUN","dest":"중앙보훈병원","express":true},
+  {"hour":10,"minute":30,"direction":"BOHUN","dest":"중앙보훈병원","express":false},
+  {"hour":10,"minute":36,"direction":"BOHUN","dest":"중앙보훈병원","express":true},
+  {"hour":10,"minute":41,"direction":"BOHUN","dest":"중앙보훈병원","express":false},
+  {"hour":10,"minute":47,"direction":"BOHUN","dest":"중앙보훈병원","express":true},
+  {"hour":10,"minute":52,"direction":"BOHUN","dest":"중앙보훈병원","express":false},
+  {"hour":10,"minute":58,"direction":"BOHUN","dest":"중앙보훈병원","express":true},
+
+  {"hour":10,"minute":2,"direction":"GAEHWA","dest":"김포공항","express":true},
+  {"hour":10,"minute":4,"direction":"GAEHWA","dest":"개화","express":false},
+  {"hour":10,"minute":9,"direction":"GAEHWA","dest":"김포공항","express":true},
+  {"hour":10,"minute":10,"direction":"GAEHWA","dest":"개화","express":false},
+  {"hour":10,"minute":15,"direction":"GAEHWA","dest":"김포공항","express":true},
+  {"hour":10,"minute":17,"direction":"GAEHWA","dest":"개화","express":false},
+  {"hour":10,"minute":21,"direction":"GAEHWA","dest":"김포공항","express":true},
+  {"hour":10,"minute":23,"direction":"GAEHWA","dest":"개화","express":false},
+  {"hour":10,"minute":28,"direction":"GAEHWA","dest":"김포공항","express":true},
+  {"hour":10,"minute":29,"direction":"GAEHWA","dest":"개화","express":false},
+  {"hour":10,"minute":34,"direction":"GAEHWA","dest":"김포공항","express":true},
+  {"hour":10,"minute":36,"direction":"GAEHWA","dest":"개화","express":false},
+  {"hour":10,"minute":40,"direction":"GAEHWA","dest":"김포공항","express":true},
+  {"hour":10,"minute":42,"direction":"GAEHWA","dest":"개화","express":false},
+  {"hour":10,"minute":46,"direction":"GAEHWA","dest":"개화","express":false},
+  {"hour":10,"minute":51,"direction":"GAEHWA","dest":"김포공항","express":true},
+  {"hour":10,"minute":55,"direction":"GAEHWA","dest":"개화","express":false},
+
+  {"hour":11,"minute":3,"direction":"BOHUN","dest":"중앙보훈병원","express":false},
+  {"hour":11,"minute":10,"direction":"BOHUN","dest":"중앙보훈병원","express":true},
+  {"hour":11,"minute":15,"direction":"BOHUN","dest":"중앙보훈병원","express":false},
+  {"hour":11,"minute":22,"direction":"BOHUN","dest":"중앙보훈병원","express":true},
+  {"hour":11,"minute":27,"direction":"BOHUN","dest":"중앙보훈병원","express":false},
+  {"hour":11,"minute":33,"direction":"BOHUN","dest":"중앙보훈병원","express":true},
+  {"hour":11,"minute":38,"direction":"BOHUN","dest":"중앙보훈병원","express":false},
+  {"hour":11,"minute":44,"direction":"BOHUN","dest":"중앙보훈병원","express":true},
+  {"hour":11,"minute":49,"direction":"BOHUN","dest":"중앙보훈병원","express":false},
+  {"hour":11,"minute":55,"direction":"BOHUN","dest":"중앙보훈병원","express":true},
+
+  {"hour":11,"minute":0,"direction":"GAEHWA","dest":"개화","express":false},
+  {"hour":11,"minute":1,"direction":"GAEHWA","dest":"김포공항","express":true},
+  {"hour":11,"minute":7,"direction":"GAEHWA","dest":"개화","express":false},
+  {"hour":11,"minute":12,"direction":"GAEHWA","dest":"김포공항","express":true},
+  {"hour":11,"minute":15,"direction":"GAEHWA","dest":"개화","express":false},
+  {"hour":11,"minute":21,"direction":"GAEHWA","dest":"김포공항","express":true},
+  {"hour":11,"minute":25,"direction":"GAEHWA","dest":"개화","express":false},
+  {"hour":11,"minute":31,"direction":"GAEHWA","dest":"김포공항","express":true},
+  {"hour":11,"minute":36,"direction":"GAEHWA","dest":"개화","express":false},
+  {"hour":11,"minute":42,"direction":"GAEHWA","dest":"김포공항","express":true},
+  {"hour":11,"minute":47,"direction":"GAEHWA","dest":"개화","express":false},
+  {"hour":11,"minute":53,"direction":"GAEHWA","dest":"김포공항","express":true},
+  {"hour":11,"minute":58,"direction":"GAEHWA","dest":"개화","express":false},
+
+  {"hour":12,"minute":0,"direction":"BOHUN","dest":"중앙보훈병원","express":false},
+  {"hour":12,"minute":6,"direction":"BOHUN","dest":"중앙보훈병원","express":true},
+  {"hour":12,"minute":11,"direction":"BOHUN","dest":"중앙보훈병원","express":false},
+  {"hour":12,"minute":17,"direction":"BOHUN","dest":"중앙보훈병원","express":true},
+  {"hour":12,"minute":22,"direction":"BOHUN","dest":"중앙보훈병원","express":false},
+  {"hour":12,"minute":28,"direction":"BOHUN","dest":"중앙보훈병원","express":true},
+  {"hour":12,"minute":33,"direction":"BOHUN","dest":"중앙보훈병원","express":false},
+  {"hour":12,"minute":39,"direction":"BOHUN","dest":"중앙보훈병원","express":true},
+  {"hour":12,"minute":44,"direction":"BOHUN","dest":"중앙보훈병원","express":false},
+  {"hour":12,"minute":50,"direction":"BOHUN","dest":"중앙보훈병원","express":true},
+  {"hour":12,"minute":55,"direction":"BOHUN","dest":"중앙보훈병원","express":false},
+
+  {"hour":12,"minute":4,"direction":"GAEHWA","dest":"김포공항","express":true},
+  {"hour":12,"minute":9,"direction":"GAEHWA","dest":"개화","express":false},
+  {"hour":12,"minute":15,"direction":"GAEHWA","dest":"김포공항","express":true},
+  {"hour":12,"minute":20,"direction":"GAEHWA","dest":"개화","express":false},
+  {"hour":12,"minute":26,"direction":"GAEHWA","dest":"김포공항","express":true},
+  {"hour":12,"minute":32,"direction":"GAEHWA","dest":"개화","express":false},
+  {"hour":12,"minute":38,"direction":"GAEHWA","dest":"김포공항","express":true},
+  {"hour":12,"minute":44,"direction":"GAEHWA","dest":"개화","express":false},
+  {"hour":12,"minute":50,"direction":"GAEHWA","dest":"김포공항","express":true},
+  {"hour":12,"minute":55,"direction":"GAEHWA","dest":"개화","express":false},
+
+  {"hour":13,"minute":1,"direction":"BOHUN","dest":"중앙보훈병원","express":true},
+  {"hour":13,"minute":6,"direction":"BOHUN","dest":"중앙보훈병원","express":false},
+  {"hour":13,"minute":12,"direction":"BOHUN","dest":"중앙보훈병원","express":true},
+  {"hour":13,"minute":17,"direction":"BOHUN","dest":"중앙보훈병원","express":false},
+  {"hour":13,"minute":23,"direction":"BOHUN","dest":"중앙보훈병원","express":true},
+  {"hour":13,"minute":28,"direction":"BOHUN","dest":"중앙보훈병원","express":false},
+  {"hour":13,"minute":34,"direction":"BOHUN","dest":"중앙보훈병원","express":true},
+  {"hour":13,"minute":40,"direction":"BOHUN","dest":"중앙보훈병원","express":false},
+  {"hour":13,"minute":46,"direction":"BOHUN","dest":"중앙보훈병원","express":true},
+  {"hour":13,"minute":52,"direction":"BOHUN","dest":"중앙보훈병원","express":false},
+  {"hour":13,"minute":58,"direction":"BOHUN","dest":"중앙보훈병원","express":true},
+
+  {"hour":13,"minute":1,"direction":"GAEHWA","dest":"김포공항","express":true},
+  {"hour":13,"minute":6,"direction":"GAEHWA","dest":"개화","express":false},
+  {"hour":13,"minute":12,"direction":"GAEHWA","dest":"김포공항","express":true},
+  {"hour":13,"minute":17,"direction":"GAEHWA","dest":"개화","express":false},
+  {"hour":13,"minute":23,"direction":"GAEHWA","dest":"김포공항","express":true},
+  {"hour":13,"minute":28,"direction":"GAEHWA","dest":"개화","express":false},
+  {"hour":13,"minute":34,"direction":"GAEHWA","dest":"김포공항","express":true},
+  {"hour":13,"minute":39,"direction":"GAEHWA","dest":"개화","express":false},
+  {"hour":13,"minute":45,"direction":"GAEHWA","dest":"김포공항","express":true},
+  {"hour":13,"minute":50,"direction":"GAEHWA","dest":"개화","express":false},
+  {"hour":13,"minute":56,"direction":"GAEHWA","dest":"김포공항","express":true},
+
+  {"hour":14,"minute":3,"direction":"BOHUN","dest":"중앙보훈병원","express":false},
+  {"hour":14,"minute":9,"direction":"BOHUN","dest":"중앙보훈병원","express":true},
+  {"hour":14,"minute":14,"direction":"BOHUN","dest":"중앙보훈병원","express":false},
+  {"hour":14,"minute":20,"direction":"BOHUN","dest":"중앙보훈병원","express":true},
+  {"hour":14,"minute":25,"direction":"BOHUN","dest":"중앙보훈병원","express":false},
+  {"hour":14,"minute":31,"direction":"BOHUN","dest":"중앙보훈병원","express":true},
+  {"hour":14,"minute":36,"direction":"BOHUN","dest":"중앙보훈병원","express":false},
+  {"hour":14,"minute":42,"direction":"BOHUN","dest":"중앙보훈병원","express":true},
+  {"hour":14,"minute":47,"direction":"BOHUN","dest":"중앙보훈병원","express":false},
+  {"hour":14,"minute":53,"direction":"BOHUN","dest":"중앙보훈병원","express":true},
+  {"hour":14,"minute":58,"direction":"BOHUN","dest":"중앙보훈병원","express":false},
+
+  {"hour":14,"minute":1,"direction":"GAEHWA","dest":"개화","express":false},
+  {"hour":14,"minute":7,"direction":"GAEHWA","dest":"김포공항","express":true},
+  {"hour":14,"minute":12,"direction":"GAEHWA","dest":"개화","express":false},
+  {"hour":14,"minute":18,"direction":"GAEHWA","dest":"김포공항","express":true},
+  {"hour":14,"minute":23,"direction":"GAEHWA","dest":"개화","express":false},
+  {"hour":14,"minute":29,"direction":"GAEHWA","dest":"김포공항","express":true},
+  {"hour":14,"minute":34,"direction":"GAEHWA","dest":"개화","express":false},
+  {"hour":14,"minute":40,"direction":"GAEHWA","dest":"김포공항","express":true},
+  {"hour":14,"minute":45,"direction":"GAEHWA","dest":"개화","express":false},
+  {"hour":14,"minute":51,"direction":"GAEHWA","dest":"김포공항","express":true},
+  {"hour":14,"minute":56,"direction":"GAEHWA","dest":"개화","express":false},
+
+  {"hour":15,"minute":4,"direction":"BOHUN","dest":"중앙보훈병원","express":true},
+  {"hour":15,"minute":9,"direction":"BOHUN","dest":"중앙보훈병원","express":false},
+  {"hour":15,"minute":15,"direction":"BOHUN","dest":"중앙보훈병원","express":true},
+  {"hour":15,"minute":20,"direction":"BOHUN","dest":"중앙보훈병원","express":false},
+  {"hour":15,"minute":26,"direction":"BOHUN","dest":"중앙보훈병원","express":true},
+  {"hour":15,"minute":31,"direction":"BOHUN","dest":"중앙보훈병원","express":false},
+  {"hour":15,"minute":37,"direction":"BOHUN","dest":"중앙보훈병원","express":true},
+  {"hour":15,"minute":42,"direction":"BOHUN","dest":"중앙보훈병원","express":false},
+  {"hour":15,"minute":48,"direction":"BOHUN","dest":"중앙보훈병원","express":true},
+  {"hour":15,"minute":53,"direction":"BOHUN","dest":"중앙보훈병원","express":false},
+  {"hour":15,"minute":59,"direction":"BOHUN","dest":"중앙보훈병원","express":true},
+
+  {"hour":15,"minute":2,"direction":"GAEHWA","dest":"김포공항","express":true},
+  {"hour":15,"minute":7,"direction":"GAEHWA","dest":"개화","express":false},
+  {"hour":15,"minute":13,"direction":"GAEHWA","dest":"김포공항","express":true},
+  {"hour":15,"minute":19,"direction":"GAEHWA","dest":"개화","express":false},
+  {"hour":15,"minute":25,"direction":"GAEHWA","dest":"김포공항","express":true},
+  {"hour":15,"minute":31,"direction":"GAEHWA","dest":"개화","express":false},
+  {"hour":15,"minute":38,"direction":"GAEHWA","dest":"김포공항","express":true},
+  {"hour":15,"minute":43,"direction":"GAEHWA","dest":"개화","express":false},
+  {"hour":15,"minute":50,"direction":"GAEHWA","dest":"김포공항","express":true},
+  {"hour":15,"minute":55,"direction":"GAEHWA","dest":"개화","express":false},
+
+  {"hour":16,"minute":4,"direction":"BOHUN","dest":"중앙보훈병원","express":false},
+  {"hour":16,"minute":10,"direction":"BOHUN","dest":"중앙보훈병원","express":true},
+  {"hour":16,"minute":12,"direction":"BOHUN","dest":"중앙보훈병원","express":false},
+  {"hour":16,"minute":16,"direction":"BOHUN","dest":"중앙보훈병원","express":false},
+  {"hour":16,"minute":22,"direction":"BOHUN","dest":"중앙보훈병원","express":true},
+  {"hour":16,"minute":28,"direction":"BOHUN","dest":"중앙보훈병원","express":false},
+  {"hour":16,"minute":33,"direction":"BOHUN","dest":"중앙보훈병원","express":true},
+  {"hour":16,"minute":39,"direction":"BOHUN","dest":"중앙보훈병원","express":false},
+  {"hour":16,"minute":42,"direction":"BOHUN","dest":"중앙보훈병원","express":false},
+  {"hour":16,"minute":44,"direction":"BOHUN","dest":"중앙보훈병원","express":true},
+  {"hour":16,"minute":51,"direction":"BOHUN","dest":"중앙보훈병원","express":false},
+  {"hour":16,"minute":55,"direction":"BOHUN","dest":"중앙보훈병원","express":true},
+
+  {"hour":16,"minute":1,"direction":"GAEHWA","dest":"김포공항","express":true},
+  {"hour":16,"minute":6,"direction":"GAEHWA","dest":"개화","express":false},
+  {"hour":16,"minute":12,"direction":"GAEHWA","dest":"김포공항","express":true},
+  {"hour":16,"minute":17,"direction":"GAEHWA","dest":"개화","express":false},
+  {"hour":16,"minute":23,"direction":"GAEHWA","dest":"김포공항","express":true},
+  {"hour":16,"minute":28,"direction":"GAEHWA","dest":"개화","express":false},
+  {"hour":16,"minute":34,"direction":"GAEHWA","dest":"김포공항","express":true},
+  {"hour":16,"minute":39,"direction":"GAEHWA","dest":"개화","express":false},
+  {"hour":16,"minute":45,"direction":"GAEHWA","dest":"김포공항","express":true},
+  {"hour":16,"minute":50,"direction":"GAEHWA","dest":"개화","express":false},
+  {"hour":16,"minute":56,"direction":"GAEHWA","dest":"김포공항","express":true},
+
+  {"hour":17,"minute":1,"direction":"BOHUN","dest":"중앙보훈병원","express":false},
+  {"hour":17,"minute":3,"direction":"BOHUN","dest":"중앙보훈병원","express":true},
+  {"hour":17,"minute":8,"direction":"BOHUN","dest":"중앙보훈병원","express":false},
+  {"hour":17,"minute":10,"direction":"BOHUN","dest":"중앙보훈병원","express":true},
+  {"hour":17,"minute":14,"direction":"BOHUN","dest":"중앙보훈병원","express":false},
+  {"hour":17,"minute":17,"direction":"BOHUN","dest":"중앙보훈병원","express":true},
+  {"hour":17,"minute":21,"direction":"BOHUN","dest":"중앙보훈병원","express":false},
+  {"hour":17,"minute":23,"direction":"BOHUN","dest":"중앙보훈병원","express":true},
+  {"hour":17,"minute":28,"direction":"BOHUN","dest":"중앙보훈병원","express":false},
+  {"hour":17,"minute":30,"direction":"BOHUN","dest":"중앙보훈병원","express":true},
+  {"hour":17,"minute":35,"direction":"BOHUN","dest":"중앙보훈병원","express":false},
+  {"hour":17,"minute":37,"direction":"BOHUN","dest":"중앙보훈병원","express":true},
+  {"hour":17,"minute":42,"direction":"BOHUN","dest":"중앙보훈병원","express":false},
+  {"hour":17,"minute":44,"direction":"BOHUN","dest":"중앙보훈병원","express":true},
+  {"hour":17,"minute":49,"direction":"BOHUN","dest":"중앙보훈병원","express":false},
+  {"hour":17,"minute":51,"direction":"BOHUN","dest":"중앙보훈병원","express":true},
+  {"hour":17,"minute":55,"direction":"BOHUN","dest":"중앙보훈병원","express":false},
+  {"hour":17,"minute":58,"direction":"BOHUN","dest":"중앙보훈병원","express":true},
+
+  {"hour":17,"minute":1,"direction":"GAEHWA","dest":"개화","express":false},
+  {"hour":17,"minute":7,"direction":"GAEHWA","dest":"김포공항","express":true},
+  {"hour":17,"minute":12,"direction":"GAEHWA","dest":"개화","express":false},
+  {"hour":17,"minute":18,"direction":"GAEHWA","dest":"김포공항","express":true},
+  {"hour":17,"minute":23,"direction":"GAEHWA","dest":"개화","express":false},
+  {"hour":17,"minute":29,"direction":"GAEHWA","dest":"김포공항","express":true},
+  {"hour":17,"minute":34,"direction":"GAEHWA","dest":"개화","express":false},
+  {"hour":17,"minute":40,"direction":"GAEHWA","dest":"김포공항","express":true},
+  {"hour":17,"minute":45,"direction":"GAEHWA","dest":"개화","express":false},
+  {"hour":17,"minute":51,"direction":"GAEHWA","dest":"김포공항","express":true},
+  {"hour":17,"minute":56,"direction":"GAEHWA","dest":"개화","express":false},
+
+  {"hour":18,"minute":2,"direction":"BOHUN","dest":"중앙보훈병원","express":false},
+  {"hour":18,"minute":4,"direction":"BOHUN","dest":"중앙보훈병원","express":true},
+  {"hour":18,"minute":9,"direction":"BOHUN","dest":"중앙보훈병원","express":false},
+  {"hour":18,"minute":11,"direction":"BOHUN","dest":"중앙보훈병원","express":true},
+  {"hour":18,"minute":16,"direction":"BOHUN","dest":"중앙보훈병원","express":false},
+  {"hour":18,"minute":18,"direction":"BOHUN","dest":"중앙보훈병원","express":true},
+  {"hour":18,"minute":23,"direction":"BOHUN","dest":"중앙보훈병원","express":false},
+  {"hour":18,"minute":25,"direction":"BOHUN","dest":"중앙보훈병원","express":true},
+  {"hour":18,"minute":30,"direction":"BOHUN","dest":"중앙보훈병원","express":false},
+  {"hour":18,"minute":32,"direction":"BOHUN","dest":"중앙보훈병원","express":true},
+  {"hour":18,"minute":36,"direction":"BOHUN","dest":"중앙보훈병원","express":false},
+  {"hour":18,"minute":39,"direction":"BOHUN","dest":"중앙보훈병원","express":true},
+  {"hour":18,"minute":43,"direction":"BOHUN","dest":"중앙보훈병원","express":false},
+  {"hour":18,"minute":45,"direction":"BOHUN","dest":"중앙보훈병원","express":true},
+  {"hour":18,"minute":50,"direction":"BOHUN","dest":"중앙보훈병원","express":false},
+  {"hour":18,"minute":52,"direction":"BOHUN","dest":"중앙보훈병원","express":true},
+  {"hour":18,"minute":57,"direction":"BOHUN","dest":"중앙보훈병원","express":false},
+  {"hour":18,"minute":59,"direction":"BOHUN","dest":"중앙보훈병원","express":true},
+
+  {"hour":18,"minute":2,"direction":"GAEHWA","dest":"김포공항","express":true},
+  {"hour":18,"minute":7,"direction":"GAEHWA","dest":"개화","express":false},
+  {"hour":18,"minute":13,"direction":"GAEHWA","dest":"김포공항","express":true},
+  {"hour":18,"minute":18,"direction":"GAEHWA","dest":"개화","express":false},
+  {"hour":18,"minute":24,"direction":"GAEHWA","dest":"김포공항","express":true},
+  {"hour":18,"minute":26,"direction":"GAEHWA","dest":"개화","express":false},
+  {"hour":18,"minute":32,"direction":"GAEHWA","dest":"김포공항","express":true},
+  {"hour":18,"minute":35,"direction":"GAEHWA","dest":"개화","express":false},
+  {"hour":18,"minute":40,"direction":"GAEHWA","dest":"김포공항","express":true},
+  {"hour":18,"minute":43,"direction":"GAEHWA","dest":"개화","express":false},
+  {"hour":18,"minute":48,"direction":"GAEHWA","dest":"김포공항","express":true},
+  {"hour":18,"minute":51,"direction":"GAEHWA","dest":"개화","express":false},
+  {"hour":18,"minute":56,"direction":"GAEHWA","dest":"김포공항","express":true},
+  {"hour":18,"minute":59,"direction":"GAEHWA","dest":"개화","express":false},
+
+  {"hour":19,"minute":4,"direction":"BOHUN","dest":"중앙보훈병원","express":false},
+  {"hour":19,"minute":6,"direction":"BOHUN","dest":"중앙보훈병원","express":true},
+  {"hour":19,"minute":11,"direction":"BOHUN","dest":"중앙보훈병원","express":false},
+  {"hour":19,"minute":13,"direction":"BOHUN","dest":"중앙보훈병원","express":true},
+  {"hour":19,"minute":17,"direction":"BOHUN","dest":"중앙보훈병원","express":false},
+  {"hour":19,"minute":20,"direction":"BOHUN","dest":"중앙보훈병원","express":true},
+  {"hour":19,"minute":24,"direction":"BOHUN","dest":"중앙보훈병원","express":false},
+  {"hour":19,"minute":28,"direction":"BOHUN","dest":"중앙보훈병원","express":true},
+  {"hour":19,"minute":33,"direction":"BOHUN","dest":"중앙보훈병원","express":false},
+  {"hour":19,"minute":37,"direction":"BOHUN","dest":"중앙보훈병원","express":true},
+  {"hour":19,"minute":42,"direction":"BOHUN","dest":"중앙보훈병원","express":false},
+  {"hour":19,"minute":46,"direction":"BOHUN","dest":"중앙보훈병원","express":true},
+  {"hour":19,"minute":51,"direction":"BOHUN","dest":"중앙보훈병원","express":false},
+  {"hour":19,"minute":55,"direction":"BOHUN","dest":"중앙보훈병원","express":true},
+
+  {"hour":19,"minute":4,"direction":"GAEHWA","dest":"김포공항","express":true},
+  {"hour":19,"minute":7,"direction":"GAEHWA","dest":"개화","express":false},
+  {"hour":19,"minute":12,"direction":"GAEHWA","dest":"김포공항","express":true},
+  {"hour":19,"minute":14,"direction":"GAEHWA","dest":"개화","express":false},
+  {"hour":19,"minute":18,"direction":"GAEHWA","dest":"김포공항","express":true},
+  {"hour":19,"minute":21,"direction":"GAEHWA","dest":"개화","express":false},
+  {"hour":19,"minute":25,"direction":"GAEHWA","dest":"김포공항","express":true},
+  {"hour":19,"minute":27,"direction":"GAEHWA","dest":"개화","express":false},
+  {"hour":19,"minute":32,"direction":"GAEHWA","dest":"김포공항","express":true},
+  {"hour":19,"minute":34,"direction":"GAEHWA","dest":"개화","express":false},
+  {"hour":19,"minute":39,"direction":"GAEHWA","dest":"김포공항","express":true},
+  {"hour":19,"minute":41,"direction":"GAEHWA","dest":"개화","express":false},
+  {"hour":19,"minute":46,"direction":"GAEHWA","dest":"김포공항","express":true},
+  {"hour":19,"minute":48,"direction":"GAEHWA","dest":"개화","express":false},
+  {"hour":19,"minute":53,"direction":"GAEHWA","dest":"김포공항","express":true},
+  {"hour":19,"minute":55,"direction":"GAEHWA","dest":"개화","express":false},
+  {"hour":19,"minute":59,"direction":"GAEHWA","dest":"김포공항","express":true},
+
+  {"hour":20,"minute":0,"direction":"BOHUN","dest":"중앙보훈병원","express":false},
+  {"hour":20,"minute":4,"direction":"BOHUN","dest":"중앙보훈병원","express":true},
+  {"hour":20,"minute":9,"direction":"BOHUN","dest":"중앙보훈병원","express":false},
+  {"hour":20,"minute":15,"direction":"BOHUN","dest":"중앙보훈병원","express":true},
+  {"hour":20,"minute":20,"direction":"BOHUN","dest":"중앙보훈병원","express":false},
+  {"hour":20,"minute":26,"direction":"BOHUN","dest":"중앙보훈병원","express":true},
+  {"hour":20,"minute":31,"direction":"BOHUN","dest":"중앙보훈병원","express":false},
+  {"hour":20,"minute":37,"direction":"BOHUN","dest":"중앙보훈병원","express":true},
+  {"hour":20,"minute":42,"direction":"BOHUN","dest":"중앙보훈병원","express":false},
+  {"hour":20,"minute":48,"direction":"BOHUN","dest":"중앙보훈병원","express":true},
+  {"hour":20,"minute":53,"direction":"BOHUN","dest":"중앙보훈병원","express":false},
+  {"hour":20,"minute":59,"direction":"BOHUN","dest":"중앙보훈병원","express":true},
+
+  {"hour":20,"minute":2,"direction":"GAEHWA","dest":"개화","express":false},
+  {"hour":20,"minute":6,"direction":"GAEHWA","dest":"김포공항","express":true},
+  {"hour":20,"minute":8,"direction":"GAEHWA","dest":"개화","express":false},
+  {"hour":20,"minute":13,"direction":"GAEHWA","dest":"김포공항","express":true},
+  {"hour":20,"minute":15,"direction":"GAEHWA","dest":"개화","express":false},
+  {"hour":20,"minute":20,"direction":"GAEHWA","dest":"김포공항","express":true},
+  {"hour":20,"minute":22,"direction":"GAEHWA","dest":"개화","express":false},
+  {"hour":20,"minute":27,"direction":"GAEHWA","dest":"김포공항","express":true},
+  {"hour":20,"minute":29,"direction":"GAEHWA","dest":"개화","express":false},
+  {"hour":20,"minute":34,"direction":"GAEHWA","dest":"김포공항","express":true},
+  {"hour":20,"minute":36,"direction":"GAEHWA","dest":"개화","express":false},
+  {"hour":20,"minute":40,"direction":"GAEHWA","dest":"김포공항","express":true},
+  {"hour":20,"minute":43,"direction":"GAEHWA","dest":"개화","express":false},
+  {"hour":20,"minute":47,"direction":"GAEHWA","dest":"김포공항","express":true},
+  {"hour":20,"minute":49,"direction":"GAEHWA","dest":"개화","express":false},
+  {"hour":20,"minute":54,"direction":"GAEHWA","dest":"김포공항","express":true},
+  {"hour":20,"minute":56,"direction":"GAEHWA","dest":"개화","express":false},
+
+  {"hour":21,"minute":4,"direction":"BOHUN","dest":"중앙보훈병원","express":false},
+  {"hour":21,"minute":10,"direction":"BOHUN","dest":"중앙보훈병원","express":true},
+  {"hour":21,"minute":15,"direction":"BOHUN","dest":"중앙보훈병원","express":false},
+  {"hour":21,"minute":21,"direction":"BOHUN","dest":"중앙보훈병원","express":true},
+  {"hour":21,"minute":26,"direction":"BOHUN","dest":"중앙보훈병원","express":false},
+  {"hour":21,"minute":32,"direction":"BOHUN","dest":"중앙보훈병원","express":true},
+  {"hour":21,"minute":37,"direction":"BOHUN","dest":"중앙보훈병원","express":false},
+  {"hour":21,"minute":43,"direction":"BOHUN","dest":"중앙보훈병원","express":true},
+  {"hour":21,"minute":48,"direction":"BOHUN","dest":"중앙보훈병원","express":false},
+  {"hour":21,"minute":54,"direction":"BOHUN","dest":"중앙보훈병원","express":true},
+  {"hour":21,"minute":59,"direction":"BOHUN","dest":"중앙보훈병원","express":false},
+
+  {"hour":21,"minute":1,"direction":"GAEHWA","dest":"김포공항","express":true},
+  {"hour":21,"minute":3,"direction":"GAEHWA","dest":"개화","express":false},
+  {"hour":21,"minute":8,"direction":"GAEHWA","dest":"김포공항","express":true},
+  {"hour":21,"minute":10,"direction":"GAEHWA","dest":"개화","express":false},
+  {"hour":21,"minute":15,"direction":"GAEHWA","dest":"김포공항","express":true},
+  {"hour":21,"minute":17,"direction":"GAEHWA","dest":"개화","express":false},
+  {"hour":21,"minute":22,"direction":"GAEHWA","dest":"김포공항","express":true},
+  {"hour":21,"minute":25,"direction":"GAEHWA","dest":"개화","express":false},
+  {"hour":21,"minute":31,"direction":"GAEHWA","dest":"개화","express":false},
+  {"hour":21,"minute":33,"direction":"GAEHWA","dest":"김포공항","express":true},
+  {"hour":21,"minute":39,"direction":"GAEHWA","dest":"개화","express":false},
+  {"hour":21,"minute":44,"direction":"GAEHWA","dest":"김포공항","express":true},
+  {"hour":21,"minute":49,"direction":"GAEHWA","dest":"개화","express":false},
+  {"hour":21,"minute":55,"direction":"GAEHWA","dest":"김포공항","express":true},
+
+  {"hour":22,"minute":5,"direction":"BOHUN","dest":"중앙보훈병원","express":true},
+  {"hour":22,"minute":10,"direction":"BOHUN","dest":"중앙보훈병원","express":false},
+  {"hour":22,"minute":16,"direction":"BOHUN","dest":"중앙보훈병원","express":true},
+  {"hour":22,"minute":21,"direction":"BOHUN","dest":"중앙보훈병원","express":false},
+  {"hour":22,"minute":27,"direction":"BOHUN","dest":"중앙보훈병원","express":true},
+  {"hour":22,"minute":32,"direction":"BOHUN","dest":"중앙보훈병원","express":false},
+  {"hour":22,"minute":38,"direction":"BOHUN","dest":"중앙보훈병원","express":true},
+  {"hour":22,"minute":43,"direction":"BOHUN","dest":"중앙보훈병원","express":false},
+  {"hour":22,"minute":49,"direction":"BOHUN","dest":"중앙보훈병원","express":true},
+  {"hour":22,"minute":54,"direction":"BOHUN","dest":"중앙보훈병원","express":false},
+
+  {"hour":22,"minute":0,"direction":"GAEHWA","dest":"개화","express":false},
+  {"hour":22,"minute":6,"direction":"GAEHWA","dest":"김포공항","express":true},
+  {"hour":22,"minute":8,"direction":"GAEHWA","dest":"개화","express":false},
+  {"hour":22,"minute":11,"direction":"GAEHWA","dest":"개화","express":false},
+  {"hour":22,"minute":17,"direction":"GAEHWA","dest":"김포공항","express":true},
+  {"hour":22,"minute":22,"direction":"GAEHWA","dest":"개화","express":false},
+  {"hour":22,"minute":28,"direction":"GAEHWA","dest":"김포공항","express":true},
+  {"hour":22,"minute":33,"direction":"GAEHWA","dest":"개화","express":false},
+  {"hour":22,"minute":39,"direction":"GAEHWA","dest":"김포공항","express":true},
+  {"hour":22,"minute":44,"direction":"GAEHWA","dest":"개화","express":false},
+  {"hour":22,"minute":50,"direction":"GAEHWA","dest":"김포공항","express":true},
+  {"hour":22,"minute":55,"direction":"GAEHWA","dest":"개화","express":false},
+
+  {"hour":23,"minute":0,"direction":"BOHUN","dest":"중앙보훈병원","express":true},
+  {"hour":23,"minute":5,"direction":"BOHUN","dest":"중앙보훈병원","express":false},
+  {"hour":23,"minute":11,"direction":"BOHUN","dest":"중앙보훈병원","express":true},
+  {"hour":23,"minute":16,"direction":"BOHUN","dest":"중앙보훈병원","express":false},
+  {"hour":23,"minute":22,"direction":"BOHUN","dest":"중앙보훈병원","express":true},
+  {"hour":23,"minute":27,"direction":"BOHUN","dest":"중앙보훈병원","express":false},
+  {"hour":23,"minute":33,"direction":"BOHUN","dest":"중앙보훈병원","express":true},
+  {"hour":23,"minute":38,"direction":"BOHUN","dest":"중앙보훈병원","express":false},
+  {"hour":23,"minute":44,"direction":"BOHUN","dest":"중앙보훈병원","express":true},
+  {"hour":23,"minute":49,"direction":"BOHUN","dest":"중앙보훈병원","express":false},
+  {"hour":23,"minute":59,"direction":"BOHUN","dest":"중앙보훈병원","express":false},
+
+  {"hour":23,"minute":1,"direction":"GAEHWA","dest":"김포공항","express":true},
+  {"hour":23,"minute":6,"direction":"GAEHWA","dest":"개화","express":false},
+  {"hour":23,"minute":12,"direction":"GAEHWA","dest":"김포공항","express":true},
+  {"hour":23,"minute":17,"direction":"GAEHWA","dest":"개화","express":false},
+  {"hour":23,"minute":23,"direction":"GAEHWA","dest":"김포공항","express":true},
+  {"hour":23,"minute":28,"direction":"GAEHWA","dest":"개화","express":false},
+  {"hour":23,"minute":34,"direction":"GAEHWA","dest":"김포공항","express":true},
+  {"hour":23,"minute":39,"direction":"GAEHWA","dest":"개화","express":false},
+  {"hour":23,"minute":45,"direction":"GAEHWA","dest":"김포공항","express":true},
+  {"hour":23,"minute":50,"direction":"GAEHWA","dest":"개화","express":false},
+  {"hour":23,"minute":56,"direction":"GAEHWA","dest":"김포공항","express":true},
+
+  {"hour":0,"minute":9,"direction":"BOHUN","dest":"중앙보훈병원","express":false},
+  {"hour":0,"minute":20,"direction":"BOHUN","dest":"삼전","express":false},
+  {"hour":0,"minute":33,"direction":"BOHUN","dest":"신논현","express":false},
+  {"hour":0,"minute":46,"direction":"BOHUN","dest":"동작","express":false},
+
+  {"hour":0,"minute":1,"direction":"GAEHWA","dest":"개화","express":false},
+  {"hour":0,"minute":7,"direction":"GAEHWA","dest":"김포공항","express":true},
+  {"hour":0,"minute":12,"direction":"GAEHWA","dest":"개화","express":false},
+  {"hour":0,"minute":18,"direction":"GAEHWA","dest":"개화","express":false},
+  {"hour":0,"minute":23,"direction":"GAEHWA","dest":"개화","express":false},
+  {"hour":0,"minute":29,"direction":"GAEHWA","dest":"개화","express":false},
+  {"hour":0,"minute":34,"direction":"GAEHWA","dest":"개화","express":false},
+  {"hour":0,"minute":40,"direction":"GAEHWA","dest":"김포공항","express":true},
+  {"hour":0,"minute":44,"direction":"GAEHWA","dest":"마곡나루","express":false},
+  {"hour":0,"minute":50,"direction":"GAEHWA","dest":"김포공항","express":true},
+  {"hour":0,"minute":56,"direction":"GAEHWA","dest":"염창","express":false}]
+
+    function getAudioFile(train) {
+  	let name;
+
+  	// 중앙보훈병원만 급행 구분
+ 	 if (train.dest === "중앙보훈병원") {
+  	  name = train.express ? "중앙보훈병원급" : "중앙보훈병원";
+ 	 } else {
+  	  name = train.dest;
+  	}
+
+ 	 return name + ".mp3";
+}
+
+
+function checkTrain() {
+  const now = new Date();
+  const nowSeconds = now.getSeconds();
+
+  const nextTrain = timetable.find(train => {
+    const targetTime = new Date();
+    targetTime.setHours(train.hour);
+    targetTime.setMinutes(train.minute);
+    targetTime.setSeconds(0);
+
+    const diff = (targetTime - now) / 1000;
+    const key = `${train.hour}:${train.minute}`;
+
+    return diff <= 30 && diff > 29 && !announcedTimes.has(key);
+  });
+
+  if (nextTrain) {
+    const audioSrc = getAudioFile(nextTrain);
+    playAudio(audioSrc);
+    document.getElementById("log").innerText =
+      `[${nextTrain.hour.toString().padStart(2, "0")}:${nextTrain.minute.toString().padStart(2, "0")}] ` +
+      (nextTrain.direction === "BOHUN" ? "중앙보훈병원 방면" : "개화 방면") +
+      ` ${nextTrain.dest}행 ` +
+      (nextTrain.express ? "급행" : "일반") +
+      " 방송 재생";
+    console.log("🎵 방송 재생:", audioSrc);
+
+    const key = `${nextTrain.hour}:${nextTrain.minute}`;
+    announcedTimes.add(key);
+  }
+
+  showTimetable(timetable, false);
+}
+
+function showTimetable(data, showAll = false) {
+  const now = new Date();
+  const nowMinutes = now.getHours() * 60 + now.getMinutes();
+
+  let filtered = data;
+  if (!showAll) {
+    filtered = data.filter(train => {
+      const trainMinutes = train.hour * 60 + train.minute;
+      return trainMinutes >= nowMinutes;
+    });
+  }
+
+  // ✅ 여기 추가!
+  filtered.sort((a, b) => {
+    const tA = a.hour * 60 + a.minute;
+    const tB = b.hour * 60 + b.minute;
+    return tA - tB;
+  });
+
+  let html = "<table>";
+  html += "<tr><th>시각</th><th>방면</th><th>종착역</th><th>급행 여부</th></tr>";
+  filtered.forEach(train => {
+    const hourStr = train.hour.toString().padStart(2, "0");
+    const minStr = train.minute.toString().padStart(2, "0");
+    html += `<tr>
+      <td>${hourStr}:${minStr}</td>
+      <td>${train.direction === "BOHUN" ? "중앙보훈병원 방면" : "개화 방면"}</td>
+      <td>${train.dest}</td>
+      <td style="color:${train.express ? '#f00' : '#0f0'}; font-weight:bold;">
+        ${train.express ? "급행" : "일반"}
+      </td>
+    </tr>`;
+  });
+  html += "</table>";
+  document.getElementById("timetable").innerHTML = html;
+}
+
+    showTimetable(timetable);
+    setInterval(checkTrain, 1000);
+  </script>
+</body>
+</html>
